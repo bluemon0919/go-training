@@ -52,18 +52,20 @@ type UserSession struct {
 
 var us UserSession
 
-func (us *UserSession) StartSession(userId string) int {
+// Start starts session
+func (us *UserSession) Start(userID string) int {
 	if us.UserID == "" {
-		us.UserID = userId
+		us.UserID = userID
 	}
-	if us.UserID != userId {
+	if us.UserID != userID {
 		return -1
 	}
 	return us.Count
 }
 
-func (us *UserSession) CloseSession(userId string) {
-	if us.UserID != userId {
+// Close closes session
+func (us *UserSession) Close(userID string) {
+	if us.UserID != userID {
 		return
 	}
 	us.Count++
@@ -103,7 +105,7 @@ func callback(w http.ResponseWriter, req *http.Request) {
 // 参考文献
 // https://blog.kazu634.com/labs/golang/2019-02-23-line-sdk-go/
 func replyMessageExec(event *linebot.Event, message *linebot.TextMessage) {
-	sessionCount := us.StartSession(event.Source.UserID)
+	sessionCount := us.Start(event.Source.UserID)
 
 	if "" != message.Text {
 		switch sessionCount {
@@ -143,5 +145,5 @@ func replyMessageExec(event *linebot.Event, message *linebot.TextMessage) {
 			}
 		}
 	}
-	us.CloseSession(event.Source.UserID)
+	us.Close(event.Source.UserID)
 }
