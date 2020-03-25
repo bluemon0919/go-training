@@ -24,6 +24,7 @@ import (
 )
 
 var bot *linebot.Client
+var us UserSession
 
 func main() {
 	var err error
@@ -41,36 +42,6 @@ func main() {
 	// For actual use, you must support HTTPS by using `ListenAndServeTLS`, a reverse proxy or something else.
 	if err := http.ListenAndServe(":"+os.Getenv("PORT"), nil); err != nil {
 		log.Fatal(err)
-	}
-}
-
-// UserSession managed user session
-type UserSession struct {
-	UserID string
-	Count  int
-}
-
-var us UserSession
-
-// Start starts session
-func (us *UserSession) Start(userID string) int {
-	if us.UserID == "" {
-		us.UserID = userID
-	}
-	if us.UserID != userID {
-		return -1
-	}
-	return us.Count
-}
-
-// Close closes session
-func (us *UserSession) Close(userID string) {
-	if us.UserID != userID {
-		return
-	}
-	us.Count++
-	if us.Count > 3 {
-		us.Count = 0
 	}
 }
 
