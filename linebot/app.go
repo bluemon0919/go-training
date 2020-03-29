@@ -15,7 +15,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -23,19 +22,7 @@ import (
 	"github.com/line/line-bot-sdk-go/linebot"
 )
 
-var bot *linebot.Client
-var us UserSession
-
 func main() {
-	var err error
-	bot, err = linebot.New(
-		os.Getenv("CHANNEL_SECRET"),
-		os.Getenv("CHANNEL_TOKEN"),
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	// Setup HTTP Server for receiving requests from LINE platform
 	http.HandleFunc("/callback", callback)
 	// This is just sample code.
@@ -56,65 +43,6 @@ func callback(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	for _, event := range events {
-		if event.Type == linebot.EventTypeMessage {
-			switch message := event.Message.(type) {
-			case *linebot.TextMessage:
-				log.Println(event.Source.UserID)
-				replyMessageExec(event, message)
-
-			case *linebot.StickerMessage:
-				replyMessage := fmt.Sprintf(
-					"sticker id is %s, stickerResourceType is ...", message.StickerID)
-				if _, err = bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(replyMessage)).Do(); err != nil {
-					log.Print(err)
-				}
-			}
-		}
+		LinebotMessageExec(event)
 	}
-}
-
-// 参考文献
-// https://blog.kazu634.com/labs/golang/2019-02-23-line-sdk-go/
-func replyMessageExec(event *linebot.Event, message *linebot.TextMessage) {
-	sessionCount := us.Start(event.Source.UserID)
-
-	if "" != message.Text {
-		switch sessionCount {
-		case 0:
-			resp := linebot.NewTextMessage("苗字を入れてください")
-			_, err := bot.ReplyMessage(event.ReplyToken, resp).Do()
-			if err != nil {
-				log.Print(err)
-			}
-		case 1:
-			resp := linebot.NewTextMessage("名前を入れてください")
-			_, err := bot.ReplyMessage(event.ReplyToken, resp).Do()
-			if err != nil {
-				log.Print(err)
-			}
-		case 2:
-			// 入力の確認
-			resp := linebot.NewTemplateMessage(
-				"this is a confirm template",
-				linebot.NewConfirmTemplate(
-					"Are you sure?",
-					linebot.NewMessageAction("Yes", "yes"),
-					linebot.NewMessageAction("No", "no"),
-				),
-			)
-			_, err := bot.ReplyMessage(event.ReplyToken, resp).Do()
-			if err != nil {
-				log.Print(err)
-			}
-		case 3:
-			if "yes" == message.Text {
-				resp := linebot.NewTextMessage("登録しました")
-				_, err := bot.ReplyMessage(event.ReplyToken, resp).Do()
-				if err != nil {
-					log.Print(err)
-				}
-			}
-		}
-	}
-	us.Close(event.Source.UserID)
 }
