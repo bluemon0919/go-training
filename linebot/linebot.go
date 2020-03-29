@@ -64,18 +64,6 @@ func replyMessageExec(event *linebot.Event, message *linebot.TextMessage) {
 	//datastoreから入力データを取得する
 	projectID := os.Getenv("PROJECT_ID")
 	ds := CreateDatastore(projectID, "RequestData")
-	/*
-		reqdatas, err := ds.Get(event.Source.UserID)
-		var req Request
-		if len(reqdatas) > 0 {
-			log.Println("データが見つかりました")
-			req = Request{
-				firstname: reqdatas[0].Firstname,
-				lastname:  reqdatas[0].Lastname,
-				state:     reqdatas[0].State,
-			}
-		}
-	*/
 
 	var requestData RequestData
 	requestData.SessionID = event.Source.UserID
