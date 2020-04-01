@@ -10,7 +10,7 @@ import (
 	"google.golang.org/api/iterator"
 )
 
-// datastoreに登録するデータの型
+// RequestData datastoreに登録するデータの型
 type RequestData struct {
 	SessionID string
 	Firstname string // 名前
@@ -18,13 +18,14 @@ type RequestData struct {
 	State     int
 }
 
-// datastoreを操作するための情報
+// Datastore datastoreを操作するための情報
 type Datastore struct {
 	projectID string         // datastoreのProjectID
 	nameKey   string         // 登録するキー
 	key       *datastore.Key // datastore Key
 }
 
+// CreateDatastore datastore操作を生成する
 func CreateDatastore(projectID string, nameKey string) *Datastore {
 	return &Datastore{
 		projectID: projectID,

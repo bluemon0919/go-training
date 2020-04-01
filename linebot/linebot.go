@@ -10,17 +10,24 @@ import (
 )
 
 const (
-	INIT = iota // iotaの初期値は0
+	// INIT 初期状態
+	INIT = iota
+	// FIRSTNAME 名前入力中
 	FIRSTNAME
+	// LASTNAME 苗字入力中
 	LASTNAME
+	// RESULT 結果確認中
 	RESULT
 )
 
+// Request 入力情報を管理する
 type Request struct {
 	firstname string // 名前
 	lastname  string // 苗字
 	state     int
 }
+
+// RequestManager Linebotへの要求を管理する
 type RequestManager struct {
 	request Request
 	event   *linebot.Event
@@ -39,6 +46,7 @@ func init() {
 	}
 }
 
+// LinebotMessageExec Linebotへのメッセージを実行する
 func LinebotMessageExec(event *linebot.Event) {
 	if event.Type != linebot.EventTypeMessage {
 		return
@@ -95,6 +103,7 @@ func replyMessageExec(event *linebot.Event, message *linebot.TextMessage) {
 	}
 }
 
+// LinebotTextMessage Linebotへのテキストメッセージを送信する
 func LinebotTextMessage(event *linebot.Event, message string) error {
 	resp := linebot.NewTextMessage(message)
 	_, err := bot.ReplyMessage(event.ReplyToken, resp).Do()
@@ -104,6 +113,7 @@ func LinebotTextMessage(event *linebot.Event, message string) error {
 	return err
 }
 
+// CreateRequestManager RequestManagerを生成する
 func CreateRequestManager(e *linebot.Event, request Request) *RequestManager {
 	return &RequestManager{
 		request: request,
@@ -111,6 +121,7 @@ func CreateRequestManager(e *linebot.Event, request Request) *RequestManager {
 	}
 }
 
+// Exec Linebotへの入力指示を順に実行する
 func (m *RequestManager) Exec(text string) error {
 	var err error
 	switch m.request.state {
