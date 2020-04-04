@@ -6,21 +6,29 @@ import (
 	"log"
 	"os"
 
+	"cloud.google.com/go/datastore"
 	"github.com/line/line-bot-sdk-go/linebot"
 )
 
 const (
-	INIT = iota // iotaの初期値は0
+	// INIT 初期状態
+	INIT = iota
+	// FIRSTNAME 名前入力中
 	FIRSTNAME
+	// LASTNAME 苗字入力中
 	LASTNAME
+	// RESULT 結果確認中
 	RESULT
 )
 
+// Request 入力情報を管理する
 type Request struct {
 	firstname string // 名前
 	lastname  string // 苗字
 	state     int
 }
+
+// RequestManager Linebotへの要求を管理する
 type RequestManager struct {
 	request Request
 	event   *linebot.Event
@@ -39,6 +47,7 @@ func init() {
 	}
 }
 
+// LinebotMessageExec Linebotへのメッセージを実行する
 func LinebotMessageExec(event *linebot.Event) {
 	if event.Type != linebot.EventTypeMessage {
 		return
@@ -63,38 +72,39 @@ func LinebotMessageExec(event *linebot.Event) {
 func replyMessageExec(event *linebot.Event, message *linebot.TextMessage) {
 	//datastoreから入力データを取得する
 	projectID := os.Getenv("PROJECT_ID")
-	ds := CreateDatastore(projectID, "RequestData")
+	fuga := NewQuestionnaire(projectID, "RequestData")
 
-	var requestData RequestData
+	var requestData QuestionnaireData
 	requestData.SessionID = event.Source.UserID
 	ctx := context.Background()
-	key, err := ds.Get(ctx, &requestData)
+	query := datastore.NewQuery("RequestData").Filter("SessionID =", requestData.SessionID)
+	key, err := fuga.Get(ctx, query)
 	if err != nil {
-		log.Println("失敗")
-		log.Print(err)
+		log.Print("Get失敗", err)
 		return
 	}
-	ds.key = key
+	fuga.entity.SessionID = event.Source.UserID // ここだけ処理がまとまっていない
 	request := Request{
-		firstname: requestData.Firstname,
-		lastname:  requestData.Lastname,
-		state:     requestData.State,
+		firstname: fuga.entity.Firstname,
+		lastname:  fuga.entity.Lastname,
+		state:     fuga.entity.State,
 	}
 	reqManager := CreateRequestManager(event, request)
 	_ = reqManager.Exec(message.Text)
 
-	requestData = RequestData{
+	fuga.entity = QuestionnaireData{
 		SessionID: event.Source.UserID,
 		Firstname: reqManager.request.firstname,
 		Lastname:  reqManager.request.lastname,
 		State:     reqManager.request.state,
 	}
-	err = ds.Put(ctx, &requestData)
+	err = fuga.Put(ctx, key)
 	if err != nil {
-		log.Print(err)
+		log.Print("Put失敗", err)
 	}
 }
 
+// LinebotTextMessage Linebotへのテキストメッセージを送信する
 func LinebotTextMessage(event *linebot.Event, message string) error {
 	resp := linebot.NewTextMessage(message)
 	_, err := bot.ReplyMessage(event.ReplyToken, resp).Do()
@@ -104,6 +114,7 @@ func LinebotTextMessage(event *linebot.Event, message string) error {
 	return err
 }
 
+// CreateRequestManager RequestManagerを生成する
 func CreateRequestManager(e *linebot.Event, request Request) *RequestManager {
 	return &RequestManager{
 		request: request,
@@ -111,6 +122,7 @@ func CreateRequestManager(e *linebot.Event, request Request) *RequestManager {
 	}
 }
 
+// Exec Linebotへの入力指示を順に実行する
 func (m *RequestManager) Exec(text string) error {
 	var err error
 	switch m.request.state {
