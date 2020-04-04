@@ -72,10 +72,9 @@ func LinebotMessageExec(event *linebot.Event) {
 func replyMessageExec(event *linebot.Event, message *linebot.TextMessage) {
 	//datastoreから入力データを取得する
 	projectID := os.Getenv("PROJECT_ID")
-	fuga := New(projectID, "RequestData")
-	//	fuga.data.SessionID =
+	fuga := NewQuestionnaire(projectID, "RequestData")
 
-	var requestData RequestData
+	var requestData QuestionnaireData
 	requestData.SessionID = event.Source.UserID
 	ctx := context.Background()
 	query := datastore.NewQuery("RequestData").Filter("SessionID =", requestData.SessionID)
@@ -84,16 +83,16 @@ func replyMessageExec(event *linebot.Event, message *linebot.TextMessage) {
 		log.Print("Get失敗", err)
 		return
 	}
-	fuga.data.SessionID = event.Source.UserID // ここだけ処理がまとまっていない
+	fuga.entity.SessionID = event.Source.UserID // ここだけ処理がまとまっていない
 	request := Request{
-		firstname: fuga.data.Firstname,
-		lastname:  fuga.data.Lastname,
-		state:     fuga.data.State,
+		firstname: fuga.entity.Firstname,
+		lastname:  fuga.entity.Lastname,
+		state:     fuga.entity.State,
 	}
 	reqManager := CreateRequestManager(event, request)
 	_ = reqManager.Exec(message.Text)
 
-	fuga.data = RequestData{
+	fuga.entity = QuestionnaireData{
 		SessionID: event.Source.UserID,
 		Firstname: reqManager.request.firstname,
 		Lastname:  reqManager.request.lastname,
