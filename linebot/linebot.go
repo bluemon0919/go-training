@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 
+	"cloud.google.com/go/datastore"
 	"github.com/line/line-bot-sdk-go/linebot"
 )
 
@@ -71,35 +72,36 @@ func LinebotMessageExec(event *linebot.Event) {
 func replyMessageExec(event *linebot.Event, message *linebot.TextMessage) {
 	//datastoreから入力データを取得する
 	projectID := os.Getenv("PROJECT_ID")
-	ds := CreateDatastore(projectID, "RequestData")
+	fuga := New(projectID, "RequestData")
+	//	fuga.data.SessionID =
 
 	var requestData RequestData
 	requestData.SessionID = event.Source.UserID
 	ctx := context.Background()
-	key, err := ds.Get(ctx, &requestData)
+	query := datastore.NewQuery("RequestData").Filter("SessionID =", requestData.SessionID)
+	key, err := fuga.Get(ctx, query)
 	if err != nil {
-		log.Println("失敗")
-		log.Print(err)
+		log.Print("Get失敗", err)
 		return
 	}
-	ds.key = key
+	fuga.data.SessionID = event.Source.UserID // ここだけ処理がまとまっていない
 	request := Request{
-		firstname: requestData.Firstname,
-		lastname:  requestData.Lastname,
-		state:     requestData.State,
+		firstname: fuga.data.Firstname,
+		lastname:  fuga.data.Lastname,
+		state:     fuga.data.State,
 	}
 	reqManager := CreateRequestManager(event, request)
 	_ = reqManager.Exec(message.Text)
 
-	requestData = RequestData{
+	fuga.data = RequestData{
 		SessionID: event.Source.UserID,
 		Firstname: reqManager.request.firstname,
 		Lastname:  reqManager.request.lastname,
 		State:     reqManager.request.state,
 	}
-	err = ds.Put(ctx, &requestData)
+	err = fuga.Put(ctx, key)
 	if err != nil {
-		log.Print(err)
+		log.Print("Put失敗", err)
 	}
 }
 
