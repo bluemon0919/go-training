@@ -10,6 +10,63 @@ import (
 	"google.golang.org/api/iterator"
 )
 
+// DatastoreOperator datastore操作インターフェース
+type DatastoreOperator interface {
+	Put(ctx context.Context, key *datastore.Key) error
+	Get(ctx context.Context, query *datastore.Query) (*datastore.Key, error)
+}
+
+// RegistrationData 登録する内容
+type RegistrationData struct {
+	Firstname string
+	Lastname  string
+}
+
+// Registration ユーザーへのアンケート結果を登録する
+type Registration struct {
+	projectID  string
+	entityType string           // datastore entity type
+	entity     RegistrationData // datastore entity
+}
+
+// NewRegistration 登録を実行するクラス
+func NewRegistration(projectID string, entityType string) *Registration {
+	return &Registration{
+		projectID:  projectID,
+		entityType: entityType,
+		entity:     RegistrationData{},
+	}
+}
+
+// Put エンティティに登録する
+func (r *Registration) Put(ctx context.Context, key *datastore.Key) error {
+	client, err := datastore.NewClient(ctx, r.projectID)
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+
+	_, err = client.Put(ctx, key, &r.entity)
+	return err
+}
+
+// Get sessionIDが一致するエンティティを取り出す
+func (r *Registration) Get(ctx context.Context, query *datastore.Query) (*datastore.Key, error) {
+	client, err := datastore.NewClient(ctx, r.projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer client.Close()
+
+	it := client.Run(ctx, query)
+	key, err := it.Next(&r.entity)
+	if err == iterator.Done { // datastoreにデータがない場合はキーを発行する
+		key = datastore.NameKey("RegistrationData", "", nil)
+		err = nil
+	}
+	return key, err
+}
+
 // QuestionnaireData アンケートを取る内容. datastore entityに該当する
 type QuestionnaireData struct {
 	SessionID string
@@ -35,27 +92,27 @@ func NewQuestionnaire(projectID string, entityType string) *Questionnaire {
 }
 
 // Put エンティティに登録する
-func (f *Questionnaire) Put(ctx context.Context, key *datastore.Key) error {
-	client, err := datastore.NewClient(ctx, f.projectID)
+func (q *Questionnaire) Put(ctx context.Context, key *datastore.Key) error {
+	client, err := datastore.NewClient(ctx, q.projectID)
 	if err != nil {
 		return err
 	}
 	defer client.Close()
 
-	_, err = client.Put(ctx, key, &f.entity)
+	_, err = client.Put(ctx, key, &q.entity)
 	return err
 }
 
 // Get sessionIDが一致するエンティティを取り出す
-func (f *Questionnaire) Get(ctx context.Context, query *datastore.Query) (*datastore.Key, error) {
-	client, err := datastore.NewClient(ctx, f.projectID)
+func (q *Questionnaire) Get(ctx context.Context, query *datastore.Query) (*datastore.Key, error) {
+	client, err := datastore.NewClient(ctx, q.projectID)
 	if err != nil {
 		return nil, err
 	}
 	defer client.Close()
 
 	it := client.Run(ctx, query)
-	key, err := it.Next(&f.entity)
+	key, err := it.Next(&q.entity)
 	if err == iterator.Done { // datastoreにデータがない場合はキーを発行する
 		key = datastore.NameKey("QuestionnaireData", "", nil)
 		err = nil

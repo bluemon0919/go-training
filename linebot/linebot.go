@@ -72,33 +72,32 @@ func LinebotMessageExec(event *linebot.Event) {
 func replyMessageExec(event *linebot.Event, message *linebot.TextMessage) {
 	//datastoreから入力データを取得する
 	projectID := os.Getenv("PROJECT_ID")
-	fuga := NewQuestionnaire(projectID, "RequestData")
+	questionnaire := NewQuestionnaire(projectID, "QuestionnaireData")
+	questionnaire.entity.SessionID = event.Source.UserID // ここだけ処理がまとまっていない
 
-	var requestData QuestionnaireData
-	requestData.SessionID = event.Source.UserID
 	ctx := context.Background()
-	query := datastore.NewQuery("RequestData").Filter("SessionID =", requestData.SessionID)
-	key, err := fuga.Get(ctx, query)
+	query := datastore.NewQuery("QuestionnaireData").Filter("SessionID =", event.Source.UserID)
+	key, err := questionnaire.Get(ctx, query)
 	if err != nil {
 		log.Print("Get失敗", err)
 		return
 	}
-	fuga.entity.SessionID = event.Source.UserID // ここだけ処理がまとまっていない
+
 	request := Request{
-		firstname: fuga.entity.Firstname,
-		lastname:  fuga.entity.Lastname,
-		state:     fuga.entity.State,
+		firstname: questionnaire.entity.Firstname,
+		lastname:  questionnaire.entity.Lastname,
+		state:     questionnaire.entity.State,
 	}
 	reqManager := CreateRequestManager(event, request)
 	_ = reqManager.Exec(message.Text)
 
-	fuga.entity = QuestionnaireData{
+	questionnaire.entity = QuestionnaireData{
 		SessionID: event.Source.UserID,
 		Firstname: reqManager.request.firstname,
 		Lastname:  reqManager.request.lastname,
 		State:     reqManager.request.state,
 	}
-	err = fuga.Put(ctx, key)
+	err = questionnaire.Put(ctx, key)
 	if err != nil {
 		log.Print("Put失敗", err)
 	}
@@ -154,7 +153,13 @@ func (m *RequestManager) Exec(text string) error {
 	case RESULT:
 		// datastoreから一時情報を削除
 		if text == "yes" {
-			// datastore2に保存
+			// datastoreに保存
+			r := NewRegistration(os.Getenv("PROJECT_ID"), "RegistrationData")
+			r.entity = RegistrationData{
+				Firstname: m.request.firstname,
+				Lastname:  m.request.lastname,
+			}
+			r.Put(context.Background(), datastore.NameKey("RegistrationData", "", nil))
 			// メッセージを送信
 			err = LinebotTextMessage(m.event, "登録しました")
 		} else {
