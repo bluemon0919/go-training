@@ -10,12 +10,6 @@ import (
 	"google.golang.org/api/iterator"
 )
 
-// DatastoreOperator datastore操作インターフェース
-type DatastoreOperator interface {
-	Put(ctx context.Context, key *datastore.Key) error
-	Get(ctx context.Context, query *datastore.Query) (*datastore.Key, error)
-}
-
 // RegistrationData 登録する内容
 type RegistrationData struct {
 	Firstname string
@@ -25,8 +19,7 @@ type RegistrationData struct {
 // Registration ユーザーへのアンケート結果を登録する
 type Registration struct {
 	projectID  string
-	entityType string           // datastore entity type
-	entity     RegistrationData // datastore entity
+	entityType string // datastore entity type
 }
 
 // NewRegistration 登録を実行するクラス
@@ -34,24 +27,23 @@ func NewRegistration(projectID string, entityType string) *Registration {
 	return &Registration{
 		projectID:  projectID,
 		entityType: entityType,
-		entity:     RegistrationData{},
 	}
 }
 
 // Put エンティティに登録する
-func (r *Registration) Put(ctx context.Context, key *datastore.Key) error {
+func (r *Registration) Put(ctx context.Context, key *datastore.Key, entity *RegistrationData) error {
 	client, err := datastore.NewClient(ctx, r.projectID)
 	if err != nil {
 		return err
 	}
 	defer client.Close()
 
-	_, err = client.Put(ctx, key, &r.entity)
+	_, err = client.Put(ctx, key, entity)
 	return err
 }
 
 // Get sessionIDが一致するエンティティを取り出す
-func (r *Registration) Get(ctx context.Context, query *datastore.Query) (*datastore.Key, error) {
+func (r *Registration) Get(ctx context.Context, query *datastore.Query, entity *RegistrationData) (*datastore.Key, error) {
 	client, err := datastore.NewClient(ctx, r.projectID)
 	if err != nil {
 		return nil, err
@@ -59,7 +51,7 @@ func (r *Registration) Get(ctx context.Context, query *datastore.Query) (*datast
 	defer client.Close()
 
 	it := client.Run(ctx, query)
-	key, err := it.Next(&r.entity)
+	key, err := it.Next(entity)
 	if err == iterator.Done { // datastoreにデータがない場合はキーを発行する
 		key = datastore.NameKey("RegistrationData", "", nil)
 		err = nil
@@ -78,8 +70,7 @@ type QuestionnaireData struct {
 // Questionnaire ユーザーからアンケートをとる
 type Questionnaire struct {
 	projectID  string
-	entityType string            // datastore entity type
-	entity     QuestionnaireData // datastore entity
+	entityType string // datastore entity type
 }
 
 // NewQuestionnaire アンケートクラス生成する
@@ -87,24 +78,23 @@ func NewQuestionnaire(projectID string, entityType string) *Questionnaire {
 	return &Questionnaire{
 		projectID:  projectID,
 		entityType: entityType,
-		entity:     QuestionnaireData{},
 	}
 }
 
 // Put エンティティに登録する
-func (q *Questionnaire) Put(ctx context.Context, key *datastore.Key) error {
+func (q *Questionnaire) Put(ctx context.Context, key *datastore.Key, entity *QuestionnaireData) error {
 	client, err := datastore.NewClient(ctx, q.projectID)
 	if err != nil {
 		return err
 	}
 	defer client.Close()
 
-	_, err = client.Put(ctx, key, &q.entity)
+	_, err = client.Put(ctx, key, entity)
 	return err
 }
 
 // Get sessionIDが一致するエンティティを取り出す
-func (q *Questionnaire) Get(ctx context.Context, query *datastore.Query) (*datastore.Key, error) {
+func (q *Questionnaire) Get(ctx context.Context, query *datastore.Query, entity *QuestionnaireData) (*datastore.Key, error) {
 	client, err := datastore.NewClient(ctx, q.projectID)
 	if err != nil {
 		return nil, err
@@ -112,7 +102,7 @@ func (q *Questionnaire) Get(ctx context.Context, query *datastore.Query) (*datas
 	defer client.Close()
 
 	it := client.Run(ctx, query)
-	key, err := it.Next(&q.entity)
+	key, err := it.Next(entity)
 	if err == iterator.Done { // datastoreにデータがない場合はキーを発行する
 		key = datastore.NameKey("QuestionnaireData", "", nil)
 		err = nil
@@ -135,15 +125,15 @@ func exampleQuestionnaire() {
 	// 登録済みのデータを取得する。データがない場合は空のデータと新しいキーが発行される。
 	ctx := context.Background()
 	query := datastore.NewQuery(" QuestionnaireData").Filter("SessionID =", entity.SessionID)
-	if key, err = Questionnaire.Get(ctx, query); err != nil {
+	if key, err = Questionnaire.Get(ctx, query, &entity); err != nil {
 		return
 	}
 
-	if err = Questionnaire.Put(ctx, key); err != nil {
+	if err = Questionnaire.Put(ctx, key, &entity); err != nil {
 		log.Print(err)
 	}
 
-	if _, err = Questionnaire.Get(ctx, query); err != nil {
+	if _, err = Questionnaire.Get(ctx, query, &entity); err != nil {
 		return
 	}
 	fmt.Println(entity)

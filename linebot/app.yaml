@@ -5,6 +5,6 @@ handlers:
   script: auto
 
 env_variables:  
-  MY_PROJECT_ID: ""
+  PROJECT_ID: ""
   CHANNEL_SECRET: ""
   CHANNEL_TOKEN: ""

@@ -23,26 +23,23 @@ import (
 )
 
 func main() {
+	projectID := os.Getenv("PROJECT_ID")
+	r := NewRoster(projectID)
+
+	botClient, err := linebot.New(
+		os.Getenv("CHANNEL_SECRET"),
+		os.Getenv("CHANNEL_TOKEN"),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	h := NewHandler(botClient, r)
+
 	// Setup HTTP Server for receiving requests from LINE platform
-	http.HandleFunc("/callback", callback)
+	http.HandleFunc("/callback", h.callback)
 	// This is just sample code.
 	// For actual use, you must support HTTPS by using `ListenAndServeTLS`, a reverse proxy or something else.
 	if err := http.ListenAndServe(":"+os.Getenv("PORT"), nil); err != nil {
 		log.Fatal(err)
-	}
-}
-
-func callback(w http.ResponseWriter, req *http.Request) {
-	events, err := bot.ParseRequest(req)
-	if err != nil {
-		if err == linebot.ErrInvalidSignature {
-			w.WriteHeader(400)
-		} else {
-			w.WriteHeader(500)
-		}
-		return
-	}
-	for _, event := range events {
-		LinebotMessageExec(event)
 	}
 }
