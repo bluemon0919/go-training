@@ -42,33 +42,24 @@ func NewHandler(client *linebot.Client, roster *Roster) *Handler {
 func (h *Handler) callback(w http.ResponseWriter, req *http.Request) {
 	events, err := h.client.ParseRequest(req)
 	if err != nil {
-		if err == linebot.ErrInvalidSignature {
-			w.WriteHeader(400)
-		} else {
-			w.WriteHeader(500)
-		}
+		log.Print(err)
 		return
 	}
 	for _, event := range events {
-		h.LinebotMessageExec(event)
-	}
-}
+		if event.Type != linebot.EventTypeMessage {
+			return
+		}
 
-// LinebotMessageExec Linebotへのメッセージを実行する
-func (h *Handler) LinebotMessageExec(event *linebot.Event) {
-	if event.Type != linebot.EventTypeMessage {
-		return
-	}
+		switch message := event.Message.(type) {
+		case *linebot.TextMessage:
+			h.replyMessageExec(event, message)
 
-	switch message := event.Message.(type) {
-	case *linebot.TextMessage:
-		h.replyMessageExec(event, message)
-
-	case *linebot.StickerMessage:
-		replyMessage := fmt.Sprintf(
-			"sticker id is %s, stickerResourceType is ...", message.StickerID)
-		if _, err := h.client.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(replyMessage)).Do(); err != nil {
-			log.Print(err)
+		case *linebot.StickerMessage:
+			replyMessage := fmt.Sprintf(
+				"sticker id is %s, stickerResourceType is ...", message.StickerID)
+			if _, err := h.client.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(replyMessage)).Do(); err != nil {
+				log.Print(err)
+			}
 		}
 	}
 }
@@ -87,12 +78,10 @@ const (
 // 参考文献
 // https://blog.kazu634.com/labs/golang/2019-02-23-line-sdk-go/
 func (h *Handler) replyMessageExec(event *linebot.Event, message *linebot.TextMessage) {
-	//datastoreから入力データを取得する
-	var question QuestionnaireData
-	question.SessionID = event.Source.UserID
-
 	ctx := context.Background()
+	//datastoreから入力データを取得する
 	query := datastore.NewQuery("QuestionnaireData").Filter("SessionID =", event.Source.UserID)
+	var question QuestionnaireData
 	key, err := h.roster.question.Get(ctx, query, &question)
 	if err != nil {
 		log.Print("Get失敗", err)
