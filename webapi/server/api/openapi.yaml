@@ -1,0 +1,45 @@
+openapi: 3.0.0
+info:
+  license:
+    name: MIT
+  title: webapi RowData
+  version: 1.0.0
+servers:
+- url: http://localhost:8080/api/
+paths:
+  /rowdata:
+    get:
+      operationId: getRowData
+      parameters:
+      - description: query target rowdata title
+        explode: true
+        in: query
+        name: title
+        required: true
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RowData'
+          description: return rowdata information
+      summary: get rowdata information
+      tags:
+      - rowdata
+components:
+  schemas:
+    RowData:
+      example:
+        detail: detail
+        title: title
+      properties:
+        title:
+          type: string
+        detail:
+          type: string
+      required:
+      - detail
+      - title
