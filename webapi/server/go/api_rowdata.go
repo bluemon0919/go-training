@@ -11,6 +11,7 @@ package webapi
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 )
@@ -48,10 +49,14 @@ func (c *RowdataApiController) GetRowData(w http.ResponseWriter, r *http.Request
 			return
 		}
 	*/
-	rowdata := RowData{
-		Title:  "みんなのラジオ番組",
-		Detail: "月曜日 12:00-13:00",
+	var rowdatas []RowData
+	for i := 0; i < 15; i++ {
+		rowdata := RowData{
+			Title:  "みんなのラジオ番組",
+			Detail: fmt.Sprintf("月曜日 %d:00-%d:00", i, i+1),
+		}
+		rowdatas = append(rowdatas, rowdata)
 	}
-	json.NewEncoder(w).Encode(rowdata)
+	json.NewEncoder(w).Encode(rowdatas)
 	//EncodeJSONResponse(result, nil, w)
 }
